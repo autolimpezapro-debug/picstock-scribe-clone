@@ -1,4 +1,4 @@
-import { ImageOff, X } from "lucide-react";
+import { ImageOff } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import type { ItemComFoto } from "@/lib/inventario";
@@ -11,13 +11,10 @@ type Props = {
 export function FotoDialog({ item, onFechar }: Props) {
   return (
     <Dialog open={!!item} onOpenChange={(o) => !o && onFechar()}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-w-none border-0 bg-background/98 p-0 sm:max-w-none h-[100dvh] w-screen translate-x-0 translate-y-0 top-0 left-0 rounded-none backdrop-blur"
-      >
+      <DialogContent className="left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-0 rounded-none border-0 p-0 backdrop-blur sm:max-w-none">
         {item ? (
           <div className="flex h-[100dvh] flex-col overflow-y-auto">
-            <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+            <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3 pr-12">
               <div className="min-w-0">
                 <DialogTitle className="text-base font-semibold uppercase leading-snug">
                   {item.nome}
@@ -26,14 +23,6 @@ export function FotoDialog({ item, onFechar }: Props) {
                   {item.quantidade} {item.unidade} em estoque
                 </p>
               </div>
-              <button
-                type="button"
-                aria-label="Fechar"
-                onClick={onFechar}
-                className="rounded-md p-2 text-muted-foreground hover:bg-secondary"
-              >
-                <X className="size-5" />
-              </button>
             </div>
 
             <div className="flex flex-1 items-center justify-center bg-black/40 p-2">
