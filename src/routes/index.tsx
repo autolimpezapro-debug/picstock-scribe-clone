@@ -144,6 +144,47 @@ function Inventario() {
         unidade: analise.unidade,
         codigo: analise.codigo,
       });
+
+      const candidatos = candidatosDuplicidade(itens, {
+        nome: analise.nome,
+        descricao: analise.descricao,
+        codigo: analise.codigo,
+      });
+
+      if (candidatos.length) {
+        const codigoIgual = candidatos.find((c) => c.pontuacao === 1);
+        let alvoId = codigoIgual?.id ?? null;
+        let info = codigoIgual
+          ? { motivo: "O código interno é igual ao de um item já cadastrado.", confianca: 100 }
+          : { motivo: "", confianca: 0 };
+
+        if (!alvoId) {
+          const conf = await checarDuplicidade({
+            data: {
+              imageBase64: base64,
+              mimeType: "image/jpeg",
+              novo: { nome: analise.nome, descricao: analise.descricao, codigo: analise.codigo },
+              candidatos: candidatos.map(({ id, nome, descricao, codigo }) => ({
+                id,
+                nome,
+                descricao,
+                codigo,
+              })),
+            },
+          });
+          alvoId = conf.id;
+          info = { motivo: conf.motivo, confianca: conf.confianca };
+        }
+
+        const existente = alvoId ? itens.find((i) => i.id === alvoId) : undefined;
+        if (existente) {
+          setDupInfo(info);
+          setDuplicado(existente);
+          toast.warning("Este material já foi conferido — ajuste a quantidade.");
+          return;
+        }
+      }
+
       setDialogo(true);
       toast.success(`Material identificado (${analise.confianca}% de certeza)`);
     } catch (e) {
