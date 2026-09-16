@@ -27,7 +27,10 @@ import {
 } from "@/components/ui/select";
 import { ItemCard } from "@/components/inventario/ItemCard";
 import { ItemDialog, rascunhoDeItem, type Rascunho } from "@/components/inventario/ItemDialog";
-import { analisarFoto } from "@/lib/ai.functions";
+import { FotoDialog } from "@/components/inventario/FotoDialog";
+import { DuplicidadeDialog } from "@/components/inventario/DuplicidadeDialog";
+import { candidatosDuplicidade } from "@/lib/similaridade";
+import { analisarFoto, confirmarDuplicidade } from "@/lib/ai.functions";
 import {
   atualizarItem,
   comprimirImagem,
@@ -75,6 +78,7 @@ const rascunhoVazio: Rascunho = {
 function Inventario() {
   const qc = useQueryClient();
   const analisar = useServerFn(analisarFoto);
+  const checarDuplicidade = useServerFn(confirmarDuplicidade);
   const inputCamera = useRef<HTMLInputElement>(null);
   const inputGaleria = useRef<HTMLInputElement>(null);
 
@@ -87,6 +91,13 @@ function Inventario() {
   const [previa, setPrevia] = useState<string | null>(null);
   const [similares, setSimilares] = useState<string[]>([]);
   const [fotoPath, setFotoPath] = useState<string | null>(null);
+  const [fotoAberta, setFotoAberta] = useState<ItemComFoto | null>(null);
+  const [duplicado, setDuplicado] = useState<ItemComFoto | null>(null);
+  const [dupInfo, setDupInfo] = useState<{ motivo: string; confianca: number }>({
+    motivo: "",
+    confianca: 0,
+  });
+  const [ajustandoDup, setAjustandoDup] = useState(false);
 
   const { data: itens = [], isLoading } = useQuery({ queryKey: ["itens"], queryFn: listarItens });
 
@@ -133,6 +144,47 @@ function Inventario() {
         unidade: analise.unidade,
         codigo: analise.codigo,
       });
+
+      const candidatos = candidatosDuplicidade(itens, {
+        nome: analise.nome,
+        descricao: analise.descricao,
+        codigo: analise.codigo,
+      });
+
+      if (candidatos.length) {
+        const codigoIgual = candidatos.find((c) => c.pontuacao === 1);
+        let alvoId = codigoIgual?.id ?? null;
+        let info = codigoIgual
+          ? { motivo: "O código interno é igual ao de um item já cadastrado.", confianca: 100 }
+          : { motivo: "", confianca: 0 };
+
+        if (!alvoId) {
+          const conf = await checarDuplicidade({
+            data: {
+              imageBase64: base64,
+              mimeType: "image/jpeg",
+              novo: { nome: analise.nome, descricao: analise.descricao, codigo: analise.codigo },
+              candidatos: candidatos.map(({ id, nome, descricao, codigo }) => ({
+                id,
+                nome,
+                descricao,
+                codigo,
+              })),
+            },
+          });
+          alvoId = conf.id;
+          info = { motivo: conf.motivo, confianca: conf.confianca };
+        }
+
+        const existente = alvoId ? itens.find((i) => i.id === alvoId) : undefined;
+        if (existente) {
+          setDupInfo(info);
+          setDuplicado(existente);
+          toast.warning("Este material já foi conferido — ajuste a quantidade.");
+          return;
+        }
+      }
+
       setDialogo(true);
       toast.success(`Material identificado (${analise.confianca}% de certeza)`);
     } catch (e) {
@@ -180,6 +232,33 @@ function Inventario() {
       recarregar();
     } catch {
       toast.error("Não consegui atualizar a quantidade.");
+    }
+  }
+
+  async function confirmarAjusteDuplicado(novaQuantidade: number) {
+    if (!duplicado) return;
+    setAjustandoDup(true);
+    try {
+      const delta = novaQuantidade - Number(duplicado.quantidade);
+      await atualizarItem(duplicado.id, { quantidade: novaQuantidade });
+      if (delta !== 0) {
+        await registrarMovimentacao(
+          duplicado.id,
+          delta > 0 ? "entrada" : "saida",
+          delta,
+          "Conferência por foto (item já cadastrado)",
+        );
+      }
+      toast.success(`Quantidade ajustada para ${novaQuantidade} ${duplicado.unidade}.`);
+      setDuplicado(null);
+      setPrevia(null);
+      setFotoPath(null);
+      setSimilares([]);
+      recarregar();
+    } catch {
+      toast.error("Não consegui ajustar a quantidade.");
+    } finally {
+      setAjustandoDup(false);
     }
   }
 
@@ -317,6 +396,7 @@ function Inventario() {
                   setDialogo(true);
                 }}
                 onExcluir={remover}
+                onVerFoto={setFotoAberta}
               />
             ))
           )}
@@ -374,6 +454,22 @@ function Inventario() {
         salvando={salvar.isPending}
         onFechar={() => setDialogo(false)}
         onSalvar={(r) => salvar.mutate(r)}
+      />
+
+      <FotoDialog item={fotoAberta} onFechar={() => setFotoAberta(null)} />
+
+      <DuplicidadeDialog
+        item={duplicado}
+        fotoNova={previa}
+        motivo={dupInfo.motivo}
+        confianca={dupInfo.confianca}
+        salvando={ajustandoDup}
+        onConfirmar={confirmarAjusteDuplicado}
+        onCadastrarNovo={() => {
+          setDuplicado(null);
+          setDialogo(true);
+        }}
+        onFechar={() => setDuplicado(null)}
       />
     </div>
   );
