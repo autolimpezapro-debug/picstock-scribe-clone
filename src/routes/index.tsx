@@ -78,6 +78,7 @@ const rascunhoVazio: Rascunho = {
 function Inventario() {
   const qc = useQueryClient();
   const analisar = useServerFn(analisarFoto);
+  const checarDuplicidade = useServerFn(confirmarDuplicidade);
   const inputCamera = useRef<HTMLInputElement>(null);
   const inputGaleria = useRef<HTMLInputElement>(null);
 
@@ -90,6 +91,13 @@ function Inventario() {
   const [previa, setPrevia] = useState<string | null>(null);
   const [similares, setSimilares] = useState<string[]>([]);
   const [fotoPath, setFotoPath] = useState<string | null>(null);
+  const [fotoAberta, setFotoAberta] = useState<ItemComFoto | null>(null);
+  const [duplicado, setDuplicado] = useState<ItemComFoto | null>(null);
+  const [dupInfo, setDupInfo] = useState<{ motivo: string; confianca: number }>({
+    motivo: "",
+    confianca: 0,
+  });
+  const [ajustandoDup, setAjustandoDup] = useState(false);
 
   const { data: itens = [], isLoading } = useQuery({ queryKey: ["itens"], queryFn: listarItens });
 
