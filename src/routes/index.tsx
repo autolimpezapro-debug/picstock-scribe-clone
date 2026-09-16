@@ -455,6 +455,22 @@ function Inventario() {
         onFechar={() => setDialogo(false)}
         onSalvar={(r) => salvar.mutate(r)}
       />
+
+      <FotoDialog item={fotoAberta} onFechar={() => setFotoAberta(null)} />
+
+      <DuplicidadeDialog
+        item={duplicado}
+        fotoNova={previa}
+        motivo={dupInfo.motivo}
+        confianca={dupInfo.confianca}
+        salvando={ajustandoDup}
+        onConfirmar={confirmarAjusteDuplicado}
+        onCadastrarNovo={() => {
+          setDuplicado(null);
+          setDialogo(true);
+        }}
+        onFechar={() => setDuplicado(null)}
+      />
     </div>
   );
 }
