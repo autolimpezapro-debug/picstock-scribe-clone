@@ -27,7 +27,10 @@ import {
 } from "@/components/ui/select";
 import { ItemCard } from "@/components/inventario/ItemCard";
 import { ItemDialog, rascunhoDeItem, type Rascunho } from "@/components/inventario/ItemDialog";
-import { analisarFoto } from "@/lib/ai.functions";
+import { FotoDialog } from "@/components/inventario/FotoDialog";
+import { DuplicidadeDialog } from "@/components/inventario/DuplicidadeDialog";
+import { candidatosDuplicidade } from "@/lib/similaridade";
+import { analisarFoto, confirmarDuplicidade } from "@/lib/ai.functions";
 import {
   atualizarItem,
   comprimirImagem,
