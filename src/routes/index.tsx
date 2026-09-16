@@ -235,6 +235,33 @@ function Inventario() {
     }
   }
 
+  async function confirmarAjusteDuplicado(novaQuantidade: number) {
+    if (!duplicado) return;
+    setAjustandoDup(true);
+    try {
+      const delta = novaQuantidade - Number(duplicado.quantidade);
+      await atualizarItem(duplicado.id, { quantidade: novaQuantidade });
+      if (delta !== 0) {
+        await registrarMovimentacao(
+          duplicado.id,
+          delta > 0 ? "entrada" : "saida",
+          delta,
+          "Conferência por foto (item já cadastrado)",
+        );
+      }
+      toast.success(`Quantidade ajustada para ${novaQuantidade} ${duplicado.unidade}.`);
+      setDuplicado(null);
+      setPrevia(null);
+      setFotoPath(null);
+      setSimilares([]);
+      recarregar();
+    } catch {
+      toast.error("Não consegui ajustar a quantidade.");
+    } finally {
+      setAjustandoDup(false);
+    }
+  }
+
   async function remover(item: ItemComFoto) {
     if (!confirm(`Excluir "${item.nome}" do inventário?`)) return;
     try {
@@ -369,6 +396,7 @@ function Inventario() {
                   setDialogo(true);
                 }}
                 onExcluir={remover}
+                onVerFoto={setFotoAberta}
               />
             ))
           )}
