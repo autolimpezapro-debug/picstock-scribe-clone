@@ -141,7 +141,7 @@ function Inventario() {
       const principal = enviadas[0];
       if (!principal) throw new Error("Não consegui preparar a foto.");
       setFotoPaths(enviadas.map((foto) => foto.path));
-      const analise = await analisar({ data: { imageBase64: base64, mimeType: "image/jpeg" } });
+      const analise = await analisar({ data: { imageBase64: principal.base64, mimeType: "image/jpeg" } });
       setSimilares(analise.similares);
       setEditando(null);
       setRascunho({
