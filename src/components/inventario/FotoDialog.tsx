@@ -84,16 +84,18 @@ export function FotoDialog({ item, onFechar }: Props) {
             {fotos.length > 1 ? (
               <div className="flex gap-2 overflow-x-auto border-b border-border px-4 py-3">
                 {fotos.map((foto, i) => (
-                  <button
+                  <Button
                     key={foto}
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     aria-label={`Ampliar foto ${i + 1}`}
                     onClick={() => setIndice(i)}
-                    className="size-16 shrink-0 overflow-hidden rounded-md bg-muted ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[ativo=true]:ring-2 data-[ativo=true]:ring-primary"
+                    className="size-16 shrink-0 overflow-hidden rounded-md bg-muted p-0 ring-offset-background data-[ativo=true]:ring-2 data-[ativo=true]:ring-primary"
                     data-ativo={i === indice}
                   >
                     <img src={foto} alt={`${item.nome} miniatura ${i + 1}`} className="size-full object-cover" />
-                  </button>
+                  </Button>
                 ))}
               </div>
             ) : null}
