@@ -13,11 +13,19 @@ export type ItemApi = {
   quantidade: number;
   estoque_minimo: number;
   foto_url: string | null;
+  foto_urls: string[];
   created_at: string;
   updated_at: string;
   foto: string | null;
+  fotos: string[];
   situacao: "sem_estoque" | "estoque_baixo" | "normal";
 };
+
+function fotosDoItem(item: { foto_url: string | null; foto_urls: string[] | null }): string[] {
+  const lista = Array.isArray(item.foto_urls) ? item.foto_urls.filter(Boolean) : [];
+  if (lista.length) return lista.slice(0, 3);
+  return item.foto_url ? [item.foto_url] : [];
+}
 
 export async function carregarItens(): Promise<ItemApi[]> {
   const { data, error } = await supabaseAdmin
@@ -27,7 +35,7 @@ export async function carregarItens(): Promise<ItemApi[]> {
   if (error) throw new Error(error.message);
 
   const itens = data ?? [];
-  const paths = itens.map((i) => i.foto_url).filter((p): p is string => !!p);
+  const paths = Array.from(new Set(itens.flatMap((i) => fotosDoItem(i))));
   const mapa = new Map<string, string>();
   if (paths.length) {
     const { data: signed } = await supabaseAdmin.storage
@@ -38,16 +46,21 @@ export async function carregarItens(): Promise<ItemApi[]> {
     }
   }
 
-  return itens.map((i) => ({
-    ...i,
-    foto: i.foto_url ? (mapa.get(i.foto_url) ?? null) : null,
-    situacao:
-      i.quantidade <= 0
-        ? ("sem_estoque" as const)
-        : i.quantidade <= i.estoque_minimo
-          ? ("estoque_baixo" as const)
-          : ("normal" as const),
-  }));
+  return itens.map((i) => {
+    const fotos = fotosDoItem(i);
+    const assinadas = fotos.map((foto) => mapa.get(foto)).filter((src): src is string => !!src);
+    return {
+      ...i,
+      foto: assinadas[0] ?? null,
+      fotos: assinadas,
+      situacao:
+        i.quantidade <= 0
+          ? ("sem_estoque" as const)
+          : i.quantidade <= i.estoque_minimo
+            ? ("estoque_baixo" as const)
+            : ("normal" as const),
+    };
+  });
 }
 
 export function calcularResumo(itens: ItemApi[]) {
