@@ -13,11 +13,12 @@ export type Item = {
   quantidade: number;
   estoque_minimo: number;
   foto_url: string | null;
+  foto_urls: string[];
   created_at: string;
   updated_at: string;
 };
 
-export type ItemComFoto = Item & { fotoSrc: string | null };
+export type ItemComFoto = Item & { fotoSrc: string | null; fotoSrcs: string[] };
 
 export const CATEGORIAS = [
   "Elétrica",
@@ -35,6 +36,12 @@ export const CATEGORIAS = [
 
 export const UNIDADES = ["un", "pc", "cx", "m", "kg", "L", "par", "rolo", "pct"];
 
+export function fotosDoItem(item: Pick<Item, "foto_url" | "foto_urls">): string[] {
+  const lista = Array.isArray(item.foto_urls) ? item.foto_urls.filter(Boolean) : [];
+  if (lista.length) return lista.slice(0, 3);
+  return item.foto_url ? [item.foto_url] : [];
+}
+
 export async function assinarFoto(path: string | null): Promise<string | null> {
   if (!path) return null;
   const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, 60 * 60 * 24);
@@ -48,7 +55,7 @@ export async function listarItens(): Promise<ItemComFoto[]> {
     .order("created_at", { ascending: false });
   if (error) throw error;
   const itens = (data ?? []) as Item[];
-  const paths = itens.map((i) => i.foto_url).filter((p): p is string => !!p);
+  const paths = Array.from(new Set(itens.flatMap((i) => fotosDoItem(i))));
   let mapa = new Map<string, string>();
   if (paths.length) {
     const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrls(paths, 60 * 60 * 24);
@@ -58,7 +65,11 @@ export async function listarItens(): Promise<ItemComFoto[]> {
         .map((s) => [s.path as string, s.signedUrl as string]),
     );
   }
-  return itens.map((i) => ({ ...i, fotoSrc: i.foto_url ? (mapa.get(i.foto_url) ?? null) : null }));
+  return itens.map((i) => {
+    const fotos = fotosDoItem(i);
+    const fotoSrcs = fotos.map((foto) => mapa.get(foto)).filter((src): src is string => !!src);
+    return { ...i, fotoSrc: fotoSrcs[0] ?? null, fotoSrcs };
+  });
 }
 
 export async function enviarFoto(file: Blob, ext = "jpg"): Promise<string> {
