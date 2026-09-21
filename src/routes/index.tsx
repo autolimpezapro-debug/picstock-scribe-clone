@@ -38,6 +38,7 @@ import {
   enviarFoto,
   excluirItem,
   fileToBase64,
+  fotosDoItem,
   listarItens,
   registrarMovimentacao,
   CATEGORIAS,
@@ -54,11 +55,13 @@ export const Route = createFileRoute("/")({
           "Fotografe o material, a IA identifica e padroniza a descrição, e você controla quantidades e exporta em PDF, planilha ou link.",
       },
       { property: "og:title", content: "Inventário do Almoxarifado com IA" },
+      { property: "og:type", content: "website" },
       {
         property: "og:description",
         content:
           "Cadastro de materiais por foto, descrição padronizada por IA, contagem de estoque e exportação em PDF, planilha e link.",
       },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Inventario,
@@ -88,9 +91,9 @@ function Inventario() {
   const [dialogo, setDialogo] = useState(false);
   const [editando, setEditando] = useState<ItemComFoto | null>(null);
   const [rascunho, setRascunho] = useState<Rascunho>(rascunhoVazio);
-  const [previa, setPrevia] = useState<string | null>(null);
+  const [previas, setPrevias] = useState<string[]>([]);
   const [similares, setSimilares] = useState<string[]>([]);
-  const [fotoPath, setFotoPath] = useState<string | null>(null);
+  const [fotoPaths, setFotoPaths] = useState<string[]>([]);
   const [fotoAberta, setFotoAberta] = useState<ItemComFoto | null>(null);
   const [duplicado, setDuplicado] = useState<ItemComFoto | null>(null);
   const [dupInfo, setDupInfo] = useState<{ motivo: string; confianca: number }>({
@@ -122,17 +125,22 @@ function Inventario() {
     return { total, pecas, baixos, zerados };
   }, [itens]);
 
-  async function aoEscolherFoto(file: File | undefined) {
-    if (!file) return;
+  async function aoEscolherFoto(files: FileList | null | undefined) {
+    const escolhidas = Array.from(files ?? []).slice(0, 3);
+    if (!escolhidas.length) return;
     setAnalisando(true);
     try {
-      const comprimida = await comprimirImagem(file);
-      setPrevia(URL.createObjectURL(comprimida));
-      const [base64, path] = await Promise.all([
-        fileToBase64(comprimida),
-        enviarFoto(comprimida, "jpg"),
-      ]);
-      setFotoPath(path);
+      const comprimidas = await Promise.all(escolhidas.map((file) => comprimirImagem(file)));
+      setPrevias(comprimidas.map((foto) => URL.createObjectURL(foto)));
+      const enviadas = await Promise.all(
+        comprimidas.map(async (foto) => {
+          const [base64, path] = await Promise.all([fileToBase64(foto), enviarFoto(foto, "jpg")]);
+          return { base64, path };
+        }),
+      );
+      const principal = enviadas[0];
+      if (!principal) throw new Error("Não consegui preparar a foto.");
+      setFotoPaths(enviadas.map((foto) => foto.path));
       const analise = await analisar({ data: { imageBase64: base64, mimeType: "image/jpeg" } });
       setSimilares(analise.similares);
       setEditando(null);
@@ -161,7 +169,7 @@ function Inventario() {
         if (!alvoId) {
           const conf = await checarDuplicidade({
             data: {
-              imageBase64: base64,
+              imageBase64: principal.base64,
               mimeType: "image/jpeg",
               novo: { nome: analise.nome, descricao: analise.descricao, codigo: analise.codigo },
               candidatos: candidatos.map(({ id, nome, descricao, codigo }) => ({
@@ -209,14 +217,14 @@ function Inventario() {
           );
         }
       } else {
-        await criarItem({ ...r, foto_url: fotoPath });
+        await criarItem({ ...r, foto_url: fotoPaths[0] ?? null, foto_urls: fotoPaths });
       }
     },
     onSuccess: () => {
       toast.success("Item salvo no inventário.");
       setDialogo(false);
-      setFotoPath(null);
-      setPrevia(null);
+      setFotoPaths([]);
+      setPrevias([]);
       setSimilares([]);
       setEditando(null);
       recarregar();
@@ -240,7 +248,12 @@ function Inventario() {
     setAjustandoDup(true);
     try {
       const delta = novaQuantidade - Number(duplicado.quantidade);
-      await atualizarItem(duplicado.id, { quantidade: novaQuantidade });
+      const fotosAtualizadas = Array.from(new Set([...fotosDoItem(duplicado), ...fotoPaths])).slice(0, 3);
+      await atualizarItem(duplicado.id, {
+        quantidade: novaQuantidade,
+        foto_url: fotosAtualizadas[0] ?? duplicado.foto_url,
+        foto_urls: fotosAtualizadas,
+      });
       if (delta !== 0) {
         await registrarMovimentacao(
           duplicado.id,
@@ -251,8 +264,8 @@ function Inventario() {
       }
       toast.success(`Quantidade ajustada para ${novaQuantidade} ${duplicado.unidade}.`);
       setDuplicado(null);
-      setPrevia(null);
-      setFotoPath(null);
+      setPrevias([]);
+      setFotoPaths([]);
       setSimilares([]);
       recarregar();
     } catch {
@@ -390,7 +403,7 @@ function Inventario() {
                 onAjustar={ajustar}
                 onEditar={(i) => {
                   setEditando(i);
-                  setPrevia(i.fotoSrc);
+                  setPrevias(i.fotoSrcs);
                   setSimilares([]);
                   setRascunho(rascunhoDeItem(i));
                   setDialogo(true);
@@ -417,8 +430,8 @@ function Inventario() {
             variant="secondary"
             onClick={() => {
               setEditando(null);
-              setPrevia(null);
-              setFotoPath(null);
+              setPrevias([]);
+              setFotoPaths([]);
               setSimilares([]);
               setRascunho(rascunhoVazio);
               setDialogo(true);
@@ -435,21 +448,22 @@ function Inventario() {
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={(e) => aoEscolherFoto(e.target.files?.[0])}
+        onChange={(e) => aoEscolherFoto(e.target.files)}
       />
       <input
         ref={inputGaleria}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
-        onChange={(e) => aoEscolherFoto(e.target.files?.[0])}
+        onChange={(e) => aoEscolherFoto(e.target.files)}
       />
 
       <ItemDialog
         aberto={dialogo}
         titulo={editando ? "Editar material" : "Novo material"}
         inicial={rascunho}
-        previa={previa}
+        previas={previas}
         similares={similares}
         salvando={salvar.isPending}
         onFechar={() => setDialogo(false)}
@@ -460,7 +474,7 @@ function Inventario() {
 
       <DuplicidadeDialog
         item={duplicado}
-        fotoNova={previa}
+        fotoNova={previas[0] ?? null}
         motivo={dupInfo.motivo}
         confianca={dupInfo.confianca}
         salvando={ajustandoDup}
