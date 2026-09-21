@@ -28,7 +28,7 @@ type Props = {
   aberto: boolean;
   titulo: string;
   inicial: Rascunho;
-  previa?: string | null;
+  previas?: string[];
   similares?: string[];
   salvando?: boolean;
   onFechar: () => void;
@@ -50,7 +50,7 @@ export function ItemDialog({
   aberto,
   titulo,
   inicial,
-  previa,
+  previas = [],
   similares,
   salvando,
   onFechar,
@@ -70,14 +70,19 @@ export function ItemDialog({
           <DialogTitle>{titulo}</DialogTitle>
         </DialogHeader>
 
-        {previa ? (
-          <img
-            src={previa}
-            alt="Foto do material"
-            className="h-44 w-full rounded-md object-cover"
-            width={640}
-            height={360}
-          />
+        {previas.length ? (
+          <div className="grid grid-cols-3 gap-2">
+            {previas.slice(0, 3).map((foto, i) => (
+              <img
+                key={foto}
+                src={foto}
+                alt={`Foto ${i + 1} do material`}
+                className="h-28 w-full rounded-md object-cover"
+                width={220}
+                height={160}
+              />
+            ))}
+          </div>
         ) : null}
 
         {similares?.length ? (
