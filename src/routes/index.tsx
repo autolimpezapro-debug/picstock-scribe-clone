@@ -157,13 +157,18 @@ function Inventario() {
         nome: analise.nome,
         descricao: analise.descricao,
         codigo: analise.codigo,
+        marca: analise.marca,
       });
 
       if (candidatos.length) {
-        const codigoIgual = candidatos.find((c) => c.pontuacao === 1);
-        let alvoId = codigoIgual?.id ?? null;
-        let info = codigoIgual
-          ? { motivo: "O código interno é igual ao de um item já cadastrado.", confianca: 100 }
+        const identico = candidatos.find((c) => c.pontuacao >= 0.98);
+        let alvoId = identico?.id ?? null;
+        let info = identico
+          ? {
+              motivo:
+                "Foto, descrição, código e marca coincidem com um item já cadastrado — aumente o estoque em vez de cadastrar de novo.",
+              confianca: 100,
+            }
           : { motivo: "", confianca: 0 };
 
         if (!alvoId) {
@@ -171,7 +176,12 @@ function Inventario() {
             data: {
               imageBase64: principal.base64,
               mimeType: "image/jpeg",
-              novo: { nome: analise.nome, descricao: analise.descricao, codigo: analise.codigo },
+              novo: {
+                nome: analise.nome,
+                descricao: analise.descricao,
+                codigo: analise.codigo,
+                marca: analise.marca,
+              },
               candidatos: candidatos.map(({ id, nome, descricao, codigo }) => ({
                 id,
                 nome,
