@@ -42,18 +42,18 @@ export async function exportarPdf(itens: ItemComFoto[]) {
     doc.setDrawColor(200);
     doc.roundedRect(margem, y, larguraPagina - margem * 2, alturaCartao, 2, 2);
 
-    if (item.fotoSrc) {
-      const dataUrl = await urlParaDataUrl(item.fotoSrc);
-      if (dataUrl) {
-        try {
-          doc.addImage(dataUrl, "JPEG", margem + 3, y + 3, 36, 36, undefined, "FAST");
-        } catch {
-          /* imagem inválida, segue sem foto */
-        }
+    const fotos = (item.fotoSrcs?.length ? item.fotoSrcs : item.fotoSrc ? [item.fotoSrc] : []).slice(0, 3);
+    for (let f = 0; f < fotos.length; f++) {
+      const dataUrl = await urlParaDataUrl(fotos[f]!);
+      if (!dataUrl) continue;
+      try {
+        doc.addImage(dataUrl, "JPEG", margem + 3 + f * 25, y + 3, 24, 24, undefined, "FAST");
+      } catch {
+        /* imagem inválida, segue sem foto */
       }
     }
 
-    const x = margem + 44;
+    const x = margem + 3 + Math.max(1, fotos.length) * 25 + 4;
     doc.setFontSize(12);
     doc.text(doc.splitTextToSize(item.nome, 140).slice(0, 1), x, y + 9);
     doc.setFontSize(9);
@@ -86,6 +86,7 @@ export function exportarPlanilha(itens: ItemComFoto[]) {
     Situação:
       i.quantidade <= 0 ? "Sem estoque" : i.quantidade <= i.estoque_minimo ? "Estoque baixo" : "Normal",
     Foto: i.fotoSrc ?? "",
+    "Qtd. fotos": i.fotoSrcs?.length ?? (i.fotoSrc ? 1 : 0),
     "Atualizado em": new Date(i.updated_at).toLocaleString("pt-BR"),
   }));
   const ws = XLSX.utils.json_to_sheet(linhas);
@@ -100,6 +101,7 @@ export function exportarPlanilha(itens: ItemComFoto[]) {
     { wch: 16 },
     { wch: 14 },
     { wch: 45 },
+    { wch: 10 },
     { wch: 18 },
   ];
   const wb = XLSX.utils.book_new();

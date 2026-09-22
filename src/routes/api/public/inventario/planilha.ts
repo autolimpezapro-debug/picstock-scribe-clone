@@ -26,6 +26,7 @@ export const Route = createFileRoute("/api/public/inventario/planilha")({
             Localizacao: i.localizacao ?? "",
             Situacao: situacaoTexto(i.situacao),
             Foto: i.foto ?? "",
+            "Qtd. fotos": i.fotos?.length ?? (i.foto ? 1 : 0),
             "Atualizado em": new Date(i.updated_at).toLocaleString("pt-BR"),
           }));
 
@@ -51,7 +52,7 @@ export const Route = createFileRoute("/api/public/inventario/planilha")({
 
           const XLSX = await import("xlsx");
           const ws = XLSX.utils.json_to_sheet(linhas);
-          ws["!cols"] = [12, 40, 55, 14, 11, 8, 14, 16, 14, 45, 18].map((wch) => ({ wch }));
+          ws["!cols"] = [12, 40, 55, 14, 11, 8, 14, 16, 14, 45, 10, 18].map((wch) => ({ wch }));
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, "Inventario");
           const buffer = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;

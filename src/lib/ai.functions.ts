@@ -13,13 +13,15 @@ export type AnaliseMaterial = {
   categoria: string;
   unidade: string;
   codigo: string;
+  marca: string;
   confianca: number;
   similares: string[];
 };
 
 const SYSTEM = `Você é um especialista em catalogação de materiais de almoxarifado (construção civil, elétrica, hidráulica, EPI, ferramentas, manutenção industrial).
 Analise a foto do material e responda SOMENTE em JSON válido com as chaves:
-{"nome": string, "descricao": string, "categoria": string, "unidade": string, "codigo": string, "confianca": number, "similares": string[]}
+{"nome": string, "descricao": string, "categoria": string, "unidade": string, "codigo": string, "marca": string, "confianca": number, "similares": string[]}
+- "marca": marca/fabricante visível na embalagem ou no produto; string vazia se não houver.
 Regras de padronização:
 - "nome": nome técnico curto no padrão de catálogo, MAIÚSCULAS, formato "TIPO + ESPECIFICAÇÃO + MEDIDA" (ex.: "PARAFUSO SEXTAVADO AÇO ZINCADO 1/2\\" X 2\\"").
 - "descricao": 1 a 2 frases objetivas com material, medidas visíveis, cor, aplicação típica.
@@ -91,6 +93,7 @@ export const analisarFoto = createServerFn({ method: "POST" })
       categoria: str(parsed["categoria"], "Outros"),
       unidade: str(parsed["unidade"], "un"),
       codigo: str(parsed["codigo"], ""),
+      marca: str(parsed["marca"], ""),
       confianca: typeof parsed["confianca"] === "number" ? Math.max(0, Math.min(100, parsed["confianca"])) : 0,
       similares: Array.isArray(parsed["similares"])
         ? (parsed["similares"] as unknown[]).filter((s): s is string => typeof s === "string").slice(0, 3)
@@ -103,7 +106,12 @@ export const analisarFoto = createServerFn({ method: "POST" })
 const InputDup = z.object({
   imageBase64: z.string().min(20),
   mimeType: z.string().default("image/jpeg"),
-  novo: z.object({ nome: z.string(), descricao: z.string(), codigo: z.string() }),
+  novo: z.object({
+    nome: z.string(),
+    descricao: z.string(),
+    codigo: z.string(),
+    marca: z.string().default(""),
+  }),
   candidatos: z
     .array(
       z.object({
@@ -127,6 +135,8 @@ Responda SOMENTE JSON válido: {"id": string|null, "confianca": number, "motivo"
 - "id": o id do item cadastrado que é O MESMO material da foto; use null se nenhum for o mesmo.
 - Considere iguais apenas materiais do mesmo tipo, mesma especificação e mesma medida. Cor ou embalagem diferente com medida diferente = materiais diferentes.
 - Código interno idêntico é forte indício de que é o mesmo item.
+- Compare também a MARCA/fabricante: mesma marca reforça ser o mesmo item; marcas diferentes com mesma especificação ainda podem ser o mesmo material, mas reduza a confiança.
+- Quando foto, descrição, código e marca coincidirem totalmente, responda confiança 100.
 - "confianca": 0 a 100 sobre ser o mesmo material.
 - "motivo": uma frase curta em português do Brasil explicando a decisão.
 Seja conservador: em dúvida, responda id null.`;
@@ -159,7 +169,7 @@ export const confirmarDuplicidade = createServerFn({ method: "POST" })
             content: [
               {
                 type: "text",
-                text: `Material fotografado agora:\nnome: ${data.novo.nome}\ncódigo: ${data.novo.codigo || "—"}\ndescrição: ${data.novo.descricao}\n\nItens já cadastrados:\n${lista}`,
+                text: `Material fotografado agora:\nnome: ${data.novo.nome}\ncódigo: ${data.novo.codigo || "—"}\nmarca: ${data.novo.marca || "—"}\ndescrição: ${data.novo.descricao}\n\nItens já cadastrados:\n${lista}`,
               },
               {
                 type: "image_url",

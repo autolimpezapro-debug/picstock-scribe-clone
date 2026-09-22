@@ -43,16 +43,20 @@ export function candidatosDuplicidade<
   T extends { id: string; nome: string; descricao: string | null; codigo: string | null },
 >(
   itens: T[],
-  novo: { nome: string; descricao: string; codigo: string },
+  novo: { nome: string; descricao: string; codigo: string; marca?: string },
   limite = 8,
 ): Candidato[] {
   const codigoNovo = normalizar(novo.codigo);
+  const marcaNova = normalizar(novo.marca ?? "");
   return itens
     .map((i) => {
       const nome = semelhanca(novo.nome, i.nome);
       const descricao = semelhanca(novo.descricao, i.descricao ?? "");
+      const textoItem = normalizar(`${i.nome} ${i.descricao ?? ""}`);
+      const marcaIgual = !!marcaNova && textoItem.includes(marcaNova);
       const codigoIgual = !!codigoNovo && normalizar(i.codigo ?? "") === codigoNovo;
-      const pontuacao = codigoIgual ? 1 : nome * 0.7 + descricao * 0.3;
+      const base = nome * 0.65 + descricao * 0.25 + (marcaIgual ? 0.1 : 0);
+      const pontuacao = codigoIgual ? 1 : Math.min(1, base);
       return {
         id: i.id,
         nome: i.nome,
