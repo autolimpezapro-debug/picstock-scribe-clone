@@ -106,7 +106,12 @@ export const analisarFoto = createServerFn({ method: "POST" })
 const InputDup = z.object({
   imageBase64: z.string().min(20),
   mimeType: z.string().default("image/jpeg"),
-  novo: z.object({ nome: z.string(), descricao: z.string(), codigo: z.string() }),
+  novo: z.object({
+    nome: z.string(),
+    descricao: z.string(),
+    codigo: z.string(),
+    marca: z.string().default(""),
+  }),
   candidatos: z
     .array(
       z.object({
@@ -130,6 +135,8 @@ Responda SOMENTE JSON válido: {"id": string|null, "confianca": number, "motivo"
 - "id": o id do item cadastrado que é O MESMO material da foto; use null se nenhum for o mesmo.
 - Considere iguais apenas materiais do mesmo tipo, mesma especificação e mesma medida. Cor ou embalagem diferente com medida diferente = materiais diferentes.
 - Código interno idêntico é forte indício de que é o mesmo item.
+- Compare também a MARCA/fabricante: mesma marca reforça ser o mesmo item; marcas diferentes com mesma especificação ainda podem ser o mesmo material, mas reduza a confiança.
+- Quando foto, descrição, código e marca coincidirem totalmente, responda confiança 100.
 - "confianca": 0 a 100 sobre ser o mesmo material.
 - "motivo": uma frase curta em português do Brasil explicando a decisão.
 Seja conservador: em dúvida, responda id null.`;
