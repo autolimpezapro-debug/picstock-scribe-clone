@@ -101,6 +101,7 @@ export function exportarPlanilha(itens: ItemComFoto[]) {
     { wch: 16 },
     { wch: 14 },
     { wch: 45 },
+    { wch: 10 },
     { wch: 18 },
   ];
   const wb = XLSX.utils.book_new();
