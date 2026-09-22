@@ -13,13 +13,15 @@ export type AnaliseMaterial = {
   categoria: string;
   unidade: string;
   codigo: string;
+  marca: string;
   confianca: number;
   similares: string[];
 };
 
 const SYSTEM = `Você é um especialista em catalogação de materiais de almoxarifado (construção civil, elétrica, hidráulica, EPI, ferramentas, manutenção industrial).
 Analise a foto do material e responda SOMENTE em JSON válido com as chaves:
-{"nome": string, "descricao": string, "categoria": string, "unidade": string, "codigo": string, "confianca": number, "similares": string[]}
+{"nome": string, "descricao": string, "categoria": string, "unidade": string, "codigo": string, "marca": string, "confianca": number, "similares": string[]}
+- "marca": marca/fabricante visível na embalagem ou no produto; string vazia se não houver.
 Regras de padronização:
 - "nome": nome técnico curto no padrão de catálogo, MAIÚSCULAS, formato "TIPO + ESPECIFICAÇÃO + MEDIDA" (ex.: "PARAFUSO SEXTAVADO AÇO ZINCADO 1/2\\" X 2\\"").
 - "descricao": 1 a 2 frases objetivas com material, medidas visíveis, cor, aplicação típica.
@@ -91,6 +93,7 @@ export const analisarFoto = createServerFn({ method: "POST" })
       categoria: str(parsed["categoria"], "Outros"),
       unidade: str(parsed["unidade"], "un"),
       codigo: str(parsed["codigo"], ""),
+      marca: str(parsed["marca"], ""),
       confianca: typeof parsed["confianca"] === "number" ? Math.max(0, Math.min(100, parsed["confianca"])) : 0,
       similares: Array.isArray(parsed["similares"])
         ? (parsed["similares"] as unknown[]).filter((s): s is string => typeof s === "string").slice(0, 3)
