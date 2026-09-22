@@ -26,6 +26,7 @@ export const Route = createFileRoute("/api/public/inventario/planilha")({
             Localizacao: i.localizacao ?? "",
             Situacao: situacaoTexto(i.situacao),
             Foto: i.foto ?? "",
+            "Qtd. fotos": i.fotos?.length ?? (i.foto ? 1 : 0),
             "Atualizado em": new Date(i.updated_at).toLocaleString("pt-BR"),
           }));
 

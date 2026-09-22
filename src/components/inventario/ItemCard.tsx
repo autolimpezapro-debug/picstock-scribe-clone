@@ -24,14 +24,21 @@ export function ItemCard({ item, onAjustar, onEditar, onExcluir, onVerFoto }: Pr
         className="size-20 shrink-0 overflow-hidden rounded-md bg-muted ring-offset-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         {item.fotoSrc ? (
-          <img
-            src={item.fotoSrc}
-            alt={item.nome}
-            loading="lazy"
-            width={160}
-            height={160}
-            className="size-full object-cover"
-          />
+          <div className="relative size-full">
+            <img
+              src={item.fotoSrc}
+              alt={item.nome}
+              loading="lazy"
+              width={160}
+              height={160}
+              className="size-full object-cover"
+            />
+            {item.fotoSrcs?.length > 1 ? (
+              <span className="absolute bottom-0.5 right-0.5 rounded bg-background/85 px-1 text-[10px] font-medium">
+                {item.fotoSrcs.length} fotos
+              </span>
+            ) : null}
+          </div>
         ) : (
           <div className="flex size-full items-center justify-center text-muted-foreground">
             <ImageOff className="size-6" />

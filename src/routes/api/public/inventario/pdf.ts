@@ -52,18 +52,18 @@ export const Route = createFileRoute("/api/public/inventario/pdf")({
             doc.setDrawColor(200);
             doc.roundedRect(margem, y, largura - margem * 2, altura, 2, 2);
 
-            if (!semFotos && item.foto) {
-              const dataUrl = await baixarComoDataUrl(item.foto);
-              if (dataUrl) {
-                try {
-                  doc.addImage(dataUrl, "JPEG", margem + 3, y + 3, 36, 36, undefined, "FAST");
-                } catch {
-                  /* foto invalida */
-                }
+            const fotos = semFotos ? [] : (item.fotos?.length ? item.fotos : item.foto ? [item.foto] : []).slice(0, 3);
+            for (let f = 0; f < fotos.length; f++) {
+              const dataUrl = await baixarComoDataUrl(fotos[f]!);
+              if (!dataUrl) continue;
+              try {
+                doc.addImage(dataUrl, "JPEG", margem + 3 + f * 25, y + 3, 24, 24, undefined, "FAST");
+              } catch {
+                /* foto invalida */
               }
             }
 
-            const x = margem + 44;
+            const x = margem + 3 + Math.max(1, fotos.length) * 25 + 4;
             doc.setFontSize(12);
             doc.text(doc.splitTextToSize(item.nome, 140).slice(0, 1), x, y + 9);
             doc.setFontSize(9);
