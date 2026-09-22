@@ -169,7 +169,7 @@ export const confirmarDuplicidade = createServerFn({ method: "POST" })
             content: [
               {
                 type: "text",
-                text: `Material fotografado agora:\nnome: ${data.novo.nome}\ncódigo: ${data.novo.codigo || "—"}\ndescrição: ${data.novo.descricao}\n\nItens já cadastrados:\n${lista}`,
+                text: `Material fotografado agora:\nnome: ${data.novo.nome}\ncódigo: ${data.novo.codigo || "—"}\nmarca: ${data.novo.marca || "—"}\ndescrição: ${data.novo.descricao}\n\nItens já cadastrados:\n${lista}`,
               },
               {
                 type: "image_url",
